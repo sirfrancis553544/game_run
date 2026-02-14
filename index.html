@@ -77,17 +77,18 @@
     }
     canvas{display:block;width:100%;height:100%;image-rendering:auto;}
 
-    /* Sidebar leaderboard */
+    /* Sidebar leaderboard (✅ remove glare over maze: no backdrop-filter; opaque-ish bg) */
     .sidebar{
       border:1px solid var(--line);
-      background:rgba(0,0,0,.32);
-      backdrop-filter: blur(10px);
+      background:rgba(8,10,16,.92);       /* stronger, non-see-through */
+      backdrop-filter: none;               /* ✅ no blur that "glares" the maze */
       border-radius:18px;
       padding:10px;
       box-shadow: 0 18px 45px rgba(0,0,0,.22);
       display:flex;
       flex-direction:column;
       min-height:0;
+      isolation:isolate;                   /* keep its paint self-contained */
     }
     .sidebar.hidden{ display:none; }
 
@@ -248,17 +249,14 @@
   </div>
 </div>
 
-<!-- When menu hidden, show a small button to bring it back -->
 <div class="menuHint" id="menuHint">
   <button id="showMenuBtn">Show menu (M)</button>
 </div>
 
-<!-- When leaderboard hidden, show a small button to bring it back -->
 <div class="boardHint" id="boardHint">
   <button id="showBoardBtn">Show leaderboard (L)</button>
 </div>
 
-<!-- End screen -->
 <div class="end" id="endScreen">
   <div class="endCard">
     <div class="endTop">
@@ -278,7 +276,6 @@
 
 <script>
 (() => {
-  // ===== Canvas setup =====
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
 
@@ -291,7 +288,6 @@
     ctx.imageSmoothingEnabled = true;
   }
 
-  // ===== UI =====
   const topbar = document.getElementById('topbar');
   const sidebar = document.getElementById('sidebar');
 
@@ -333,7 +329,7 @@
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       master = audioCtx.createGain();
-      master.gain.value = 0.12; // master volume
+      master.gain.value = 0.12;
       master.connect(audioCtx.destination);
     }
     if (audioCtx.state === "suspended") audioCtx.resume();
@@ -342,7 +338,6 @@
 
   function unlockAudioOnce() {
     if (!ensureAudio()) return;
-    // tiny "silent tick" unlock (mobile Safari friendliness)
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     g.gain.value = 0.00001;
@@ -369,7 +364,6 @@
     o.frequency.setValueAtTime(freq, t0);
     if (sweep) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + sweep), t0 + dur);
 
-    // envelope
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(0.6 * vol, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
@@ -402,7 +396,6 @@
     }
   }
 
-  // unlock audio on first interaction (required by browsers)
   window.addEventListener("pointerdown", unlockAudioOnce, { once: true });
   window.addEventListener("keydown", unlockAudioOnce, { once: true });
   soundToggle.addEventListener("change", () => setSound(soundToggle.checked));
@@ -432,8 +425,8 @@
 
   // ===== World =====
   let gridW, gridH, cell, baseOffsetX, baseOffsetY;
-  let grid;               // 0 wall, 1 floor
-  let trails;             // 4 layers
+  let grid;
+  let trails;
   let startCells = [];
   let startCell = null;
   let finishCell = null;
@@ -446,7 +439,7 @@
   const FOCUS_DURATION = 2.6;
 
   // ===== Powerups =====
-  let powerups = []; // {x,y,type,cooldown}
+  let powerups = [];
   let basePath = null;
   let basePathIndex = new Map();
 
@@ -466,10 +459,8 @@
   let countdown = 0;
   const lapsTotal = 3;
 
-  // countdown tick helper
   let lastCountdownSec = null;
 
-  // FX
   let sparks = [];
   let toasts = [];
 
@@ -557,7 +548,7 @@
     return null;
   }
 
-  // ===== Map builder (maze only) =====
+  // ===== Map builder =====
   function buildMazeMap() {
     grid = makeGrid(gridW, gridH, 0);
     const dirs = [[ 2, 0],[-2, 0],[ 0, 2],[ 0,-2]];
@@ -978,7 +969,6 @@
     const s = worldToScreenPx(bike.x, bike.y);
     spawnSparks(s.sx, s.sy, bike.color);
 
-    // ✅ powerup SFX
     if (p.type === "speed")    beep({freq:900, dur:0.07, type:"sawtooth", vol:0.9, sweep: 600});
     if (p.type === "slow")     beep({freq:220, dur:0.10, type:"square",  vol:0.8, sweep:-80});
     if (p.type === "shortcut") jingle([{freq:700,dur:0.05},{freq:980,dur:0.07}], {type:"triangle", vol:0.9});
@@ -1165,13 +1155,11 @@
       if (countdown <= 0) {
         statusTxt.textContent = "Racing";
         lastCountdownSec = null;
-        // ✅ countdown go
         beep({freq: 960, dur: 0.08, type:"sawtooth", vol:0.9, sweep: 420});
         if (autoHideToggle.checked) setMenuHidden(true);
       } else {
         const sec = Math.ceil(countdown);
         statusTxt.textContent = `Starting in ${sec}…`;
-        // ✅ countdown tick
         if (sec !== lastCountdownSec) {
           lastCountdownSec = sec;
           beep({freq: 280 + (3-sec)*90, dur: 0.05, type:"square", vol:0.65});
@@ -1223,7 +1211,6 @@
         if (turning) {
           const s = worldToScreenPx(bike.x,bike.y);
           spawnSparks(s.sx, s.sy, bike.color);
-          // subtle turn "tick"
           if (!boardHidden) beep({freq: 160 + bike.id*40, dur: 0.015, type:"sine", vol:0.08});
         }
         bike.lastDir = m.dir;
@@ -1247,7 +1234,6 @@
             focusOnBike(bike.id, 3.5);
             addToast("🏁 FINISH!", "rgba(233,241,255,.95)", bike);
 
-            // ✅ finish fanfare
             jingle(
               [{freq:660,dur:0.08},{freq:880,dur:0.08},{freq:990,dur:0.10},{freq:1320,dur:0.14}],
               {type:"sawtooth", vol:1}
@@ -1260,7 +1246,6 @@
             lapTxt.textContent = `${Math.max(...bikes.map(b=>b.lap))}/${lapsTotal}`;
             bike.path = null;
 
-            // ✅ lap ding
             beep({freq: 540 + bike.lap*80, dur: 0.06, type:"triangle", vol:0.55, sweep: 120});
 
             const neighbors = DIRS4
@@ -1280,7 +1265,7 @@
     }
   }
 
-  // ===== Drawing helpers (unchanged) =====
+  // ===== Drawing helpers =====
   function drawGlowRect(x,y,w,h, glow, alpha=1) {
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -1295,6 +1280,13 @@
     const c = cell;
     const active = (p.cooldown <= 0);
 
+    // ✅ bigger icons (and slightly bigger tile block)
+    const box = 0.78;        // was ~0.60
+    const boxPad = (1 - box) / 2;
+    const inner = 0.56;      // was ~0.44
+    const innerPad = (1 - inner) / 2;
+    const fontPx = Math.max(16, c * 0.72); // was c*0.55
+
     let glow, fill, label;
     if (p.type === "speed")    { glow="rgba(127,194,255,.85)"; fill="rgba(127,194,255,.14)"; label="⚡"; }
     if (p.type === "slow")     { glow="rgba(255,211,124,.85)"; fill="rgba(255,211,124,.12)"; label="🐌"; }
@@ -1305,26 +1297,26 @@
     ctx.save();
     ctx.globalAlpha = active ? 1 : 0.25;
     ctx.fillStyle = fill;
-    drawGlowRect(px+c*0.20, py+c*0.20, c*0.60, c*0.60, glow, 0.95);
+    drawGlowRect(px + c*boxPad, py + c*boxPad, c*box, c*box, glow, 0.98);
 
     ctx.shadowBlur = 0;
     ctx.fillStyle = "rgba(255,255,255,.12)";
-    ctx.fillRect(px+c*0.28, py+c*0.28, c*0.44, c*0.44);
+    ctx.fillRect(px + c*innerPad, py + c*innerPad, c*inner, c*inner);
 
-    ctx.font = `${Math.max(12, c*0.55)}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+    ctx.font = `${fontPx}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(233,241,255,.92)";
+    ctx.fillStyle = "rgba(233,241,255,.95)";
     ctx.shadowColor = glow;
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 18;
     ctx.fillText(label, px + c/2, py + c/2 + 1);
 
     if (!active) {
       const t = clamp(p.cooldown / 6.0, 0, 1);
       ctx.strokeStyle = "rgba(233,241,255,.22)";
-      ctx.lineWidth = Math.max(2, c*0.10);
+      ctx.lineWidth = Math.max(2, c*0.12);
       ctx.beginPath();
-      ctx.arc(px+c/2, py+c/2, c*0.34, -Math.PI/2, -Math.PI/2 + (1-t)*Math.PI*2);
+      ctx.arc(px+c/2, py+c/2, c*0.40, -Math.PI/2, -Math.PI/2 + (1-t)*Math.PI*2); // bigger ring
       ctx.stroke();
     }
     ctx.restore();
@@ -1534,7 +1526,6 @@
     }
   }
 
-  // ===== Loop =====
   function loop(t) {
     if (!lastT) lastT = t;
     const dt = Math.min(0.06, (t - lastT) / 1000);
@@ -1550,7 +1541,6 @@
     requestAnimationFrame(loop);
   }
 
-  // ===== End screen =====
   function showEndScreen() {
     renderLeaderboard(true);
     endSub.textContent = `Winner: ${winner ? winner.name : "—"} • Time: ${raceTime.toFixed(1)}s`;
@@ -1563,7 +1553,6 @@
     applyUIVisibility();
   }
 
-  // ===== Reset / Build track =====
   function resetRace(newTrack=true) {
     winner = null;
     running = false;
@@ -1614,7 +1603,6 @@
   // ===== Controls =====
   startBtn.addEventListener('click', () => {
     unlockAudioOnce();
-    // ✅ start jingle
     jingle([{freq:520,dur:0.06},{freq:660,dur:0.06},{freq:880,dur:0.08}], {type:"sawtooth", vol:0.9});
 
     if (winner) resetRace(false);
