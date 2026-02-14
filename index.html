@@ -169,16 +169,17 @@
     }
     .end.show{display:grid;}
     .endCard{
-      width:min(620px, 95vw);
-      border:1px solid rgba(255,255,255,.16);
-      border-radius:22px;
-      background:linear-gradient(to bottom, rgba(255,255,255,.09), rgba(255,255,255,.05));
-      box-shadow: 0 28px 80px rgba(0,0,0,.45);
-      padding:18px;
-    }
+  width:min(1240px, 96vw);         /* was 620px → 1240px */
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:22px;
+  background:linear-gradient(to bottom, rgba(255,255,255,.09), rgba(255,255,255,.05));
+  box-shadow: 0 28px 80px rgba(0,0,0,.45);
+  padding:36px;                   /* was 18px → 36px */
+}
+
     .endTop{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;margin-bottom:12px;}
-    .endTitle{font-weight:1000; letter-spacing:.9px;font-size:18px;}
-    .endSub{color:rgba(233,241,255,.75);font-size:13px;margin-top:2px;}
+    .endTitle{ font-size:28px; }       /* was 18px */
+.endSub{ font-size:16px; }         /* was 13px */
     .endGrid{display:grid; grid-template-columns: 1fr; gap:10px; margin-top:12px;}
     .endActions{display:flex; gap:10px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap;}
 
