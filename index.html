@@ -1,0 +1,1715 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TRON • Maze Race</title>
+  <style>
+    :root{
+      --panel:rgba(255,255,255,.06);
+      --line:rgba(255,255,255,.14);
+      --text:#e9f1ff;
+      --muted:rgba(233,241,255,.72);
+    }
+    html,body{height:100%;margin:0;background:radial-gradient(1200px 700px at 50% 35%, #0a1530 0%, #060a12 55%, #04060c 100%); color:var(--text); font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    .wrap{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr;}
+
+    header{
+      display:flex;gap:12px;align-items:center;justify-content:space-between;
+      padding:12px 14px;border-bottom:1px solid var(--line);
+      background:linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,.10));
+      backdrop-filter: blur(8px);
+      transition: transform .25s ease, opacity .25s ease;
+      will-change: transform;
+      z-index:5;
+    }
+    header.hidden{
+      transform: translateY(-110%);
+      opacity: 0.01;
+      pointer-events:none;
+    }
+
+    .left{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .badge{padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);letter-spacing:.2px;}
+    .title{font-weight:900;letter-spacing:.7px;}
+    .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    button{
+      cursor:pointer;border-radius:12px;padding:9px 12px;border:1px solid var(--line);
+      background:rgba(255,255,255,.08);color:var(--text);
+      transition:transform .06s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+      outline:none;
+    }
+    button:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);}
+    button:active{transform:translateY(1px);}
+    button.primary{background:rgba(124,255,178,.12);border-color:rgba(124,255,178,.35);}
+    button.primary:hover{background:rgba(124,255,178,.18);}
+    button.danger{background:rgba(255,124,166,.10);border-color:rgba(255,124,166,.30);}
+
+    .toggle{
+      display:flex;gap:6px;align-items:center;
+      padding:7px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);
+    }
+    .toggle input{accent-color:#7fc2ff;}
+
+    .hud{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .stat{padding:6px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);}
+    .stat b{color:var(--text);font-weight:900;}
+    .small{font-size:12px;color:var(--muted);}
+
+    /* ===== Main layout: canvas + right sidebar leaderboard ===== */
+    .main{
+      height:100%;
+      display:grid;
+      grid-template-columns: 1fr 280px;
+      gap:12px;
+      padding:12px;
+      box-sizing:border-box;
+    }
+    .stage{
+      position:relative;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.02);
+      box-shadow: 0 18px 45px rgba(0,0,0,.22);
+      min-height:0;
+    }
+    canvas{display:block;width:100%;height:100%;image-rendering:auto;}
+
+    /* Sidebar leaderboard */
+    .sidebar{
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.32);
+      backdrop-filter: blur(10px);
+      border-radius:18px;
+      padding:10px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.22);
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .sidebar.hidden{ display:none; }
+
+    .boardHead{
+      display:flex; align-items:center; justify-content:space-between;
+      margin:0 0 10px;
+      padding:2px 2px 8px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .boardTitle{
+      font-size:12px;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      color:rgba(233,241,255,.78);
+      margin:0;
+      font-weight:900;
+    }
+    .kbd{
+      font-size:12px;color:rgba(233,241,255,.75);
+      padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
+      white-space:nowrap;
+    }
+    .boardRows{overflow:auto;padding-right:2px;}
+    .row{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:7px 8px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      margin-bottom:8px;
+    }
+    .row:last-child{margin-bottom:0;}
+    .dot{width:10px;height:10px;border-radius:999px;flex:0 0 auto;box-shadow: 0 0 16px currentColor;}
+    .name{display:flex; align-items:center; gap:8px; min-width:0;font-weight:900;}
+    .meta{display:flex; gap:8px; align-items:center; color:rgba(233,241,255,.75);font-size:12px;white-space:nowrap;}
+    .pill{padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);}
+
+    /* End screen */
+    .end{
+      position:fixed; inset:0; z-index:10;
+      display:none;
+      place-items:center;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      padding:20px;
+    }
+    .end.show{display:grid;}
+    .endCard{
+      width:min(620px, 95vw);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:22px;
+      background:linear-gradient(to bottom, rgba(255,255,255,.09), rgba(255,255,255,.05));
+      box-shadow: 0 28px 80px rgba(0,0,0,.45);
+      padding:18px;
+    }
+    .endTop{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;margin-bottom:12px;}
+    .endTitle{font-weight:1000; letter-spacing:.9px;font-size:18px;}
+    .endSub{color:rgba(233,241,255,.75);font-size:13px;margin-top:2px;}
+    .endGrid{display:grid; grid-template-columns: 1fr; gap:10px; margin-top:12px;}
+    .endActions{display:flex; gap:10px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap;}
+
+    /* Tiny hint button when menu hidden */
+    .menuHint{
+      position:fixed; right:12px; top:12px; z-index:6;
+      display:none;
+      pointer-events:auto;
+    }
+    .menuHint.show{display:block;}
+
+    /* Optional: tiny hint for leaderboard when hidden */
+    .boardHint{
+      position:fixed; right:12px; top:58px; z-index:6;
+      display:none;
+      pointer-events:auto;
+    }
+    .boardHint.show{display:block;}
+
+    @media (max-width: 860px){
+      .main{grid-template-columns: 1fr;}
+      .sidebar{
+        position:fixed;
+        left:12px; right:12px; bottom:12px;
+        max-height: 34vh;
+        z-index:4;
+      }
+      .stage{height:calc(100vh - 74px - 24px);}
+    }
+    @media (min-width: 861px){
+      .stage{height:100%;}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header id="topbar">
+    <div class="left">
+      <div class="badge title">TRON • MAZE RACE</div>
+      <div class="badge small">Space = Start • R = Restart • 1–4 = Manual Boost • Click bike = Focus • M = Menu • L = Leaderboard</div>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="primary">Start</button>
+      <button id="resetBtn" class="danger">New Track + Restart</button>
+
+      <div class="toggle" title="Randomized personalities + reroute randomness + speed variance.">
+        <input id="chaosToggle" type="checkbox" checked />
+        <label for="chaosToggle">Chaos</label>
+      </div>
+
+      <div class="toggle" title="Show each bike's planned path as a colored glow line.">
+        <input id="pathToggle" type="checkbox" checked />
+        <label for="pathToggle">Show paths</label>
+      </div>
+
+      <div class="toggle" title="Leaves neon trails behind bikes (visual only).">
+        <input id="trailToggle" type="checkbox" checked />
+        <label for="trailToggle">Neon trails</label>
+      </div>
+
+      <div class="toggle" title="Powerups: speed, slow, shortcut, swap, trapdoor.">
+        <input id="powerToggle" type="checkbox" checked />
+        <label for="powerToggle">Powerups</label>
+      </div>
+
+      <div class="toggle" title="Auto-hide the top menu once the race starts (press M to toggle anytime).">
+        <input id="autoHideToggle" type="checkbox" checked />
+        <label for="autoHideToggle">Auto-hide menu</label>
+      </div>
+
+      <!-- ✅ Sound toggle -->
+      <div class="toggle" title="Sound effects (browser requires first click/keypress to enable)">
+        <input id="soundToggle" type="checkbox" checked />
+        <label for="soundToggle">Sound</label>
+      </div>
+
+      <div class="hud">
+        <div class="stat">Status: <b id="statusTxt">Ready</b></div>
+        <div class="stat">Winner: <b id="winnerTxt">—</b></div>
+        <div class="stat">Time: <b id="timeTxt">0.0s</b></div>
+        <div class="stat">Lap: <b id="lapTxt">1/3</b></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="stage">
+      <canvas id="c"></canvas>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="boardHead">
+        <h3 class="boardTitle">Leaderboard</h3>
+        <span class="kbd">L</span>
+      </div>
+      <div class="boardRows" id="boardRows"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- When menu hidden, show a small button to bring it back -->
+<div class="menuHint" id="menuHint">
+  <button id="showMenuBtn">Show menu (M)</button>
+</div>
+
+<!-- When leaderboard hidden, show a small button to bring it back -->
+<div class="boardHint" id="boardHint">
+  <button id="showBoardBtn">Show leaderboard (L)</button>
+</div>
+
+<!-- End screen -->
+<div class="end" id="endScreen">
+  <div class="endCard">
+    <div class="endTop">
+      <div>
+        <div class="endTitle">🏁 Results</div>
+        <div class="endSub" id="endSub">—</div>
+      </div>
+      <div class="kbd">Space = race again</div>
+    </div>
+    <div class="endGrid" id="endGrid"></div>
+    <div class="endActions">
+      <button id="endAgain" class="primary">Race again (same track)</button>
+      <button id="endNew" class="danger">New track</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ===== Canvas setup =====
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+
+  let DPR = 1;
+  function resize() {
+    DPR = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(canvas.clientWidth * DPR);
+    canvas.height = Math.floor(canvas.clientHeight * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+  }
+
+  // ===== UI =====
+  const topbar = document.getElementById('topbar');
+  const sidebar = document.getElementById('sidebar');
+
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const chaosToggle = document.getElementById('chaosToggle');
+  const pathToggle = document.getElementById('pathToggle');
+  const trailToggle = document.getElementById('trailToggle');
+  const powerToggle = document.getElementById('powerToggle');
+  const autoHideToggle = document.getElementById('autoHideToggle');
+  const soundToggle = document.getElementById('soundToggle');
+
+  const statusTxt = document.getElementById('statusTxt');
+  const winnerTxt = document.getElementById('winnerTxt');
+  const timeTxt = document.getElementById('timeTxt');
+  const lapTxt = document.getElementById('lapTxt');
+
+  const boardRows = document.getElementById('boardRows');
+
+  const menuHint = document.getElementById('menuHint');
+  const showMenuBtn = document.getElementById('showMenuBtn');
+
+  const boardHint = document.getElementById('boardHint');
+  const showBoardBtn = document.getElementById('showBoardBtn');
+
+  const endScreen = document.getElementById('endScreen');
+  const endSub = document.getElementById('endSub');
+  const endGrid = document.getElementById('endGrid');
+  const endAgain = document.getElementById('endAgain');
+  const endNew = document.getElementById('endNew');
+
+  // ===== Sound (WebAudio synth; no files) =====
+  let audioCtx = null;
+  let master = null;
+  let soundEnabled = true;
+
+  function ensureAudio() {
+    if (!soundEnabled) return false;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      master = audioCtx.createGain();
+      master.gain.value = 0.12; // master volume
+      master.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return true;
+  }
+
+  function unlockAudioOnce() {
+    if (!ensureAudio()) return;
+    // tiny "silent tick" unlock (mobile Safari friendliness)
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    g.gain.value = 0.00001;
+    o.connect(g); g.connect(master);
+    o.start(); o.stop(audioCtx.currentTime + 0.01);
+  }
+
+  function setSound(on) {
+    soundEnabled = !!on;
+    if (audioCtx) {
+      if (!soundEnabled) audioCtx.suspend();
+      else audioCtx.resume();
+    }
+  }
+
+  function beep({ freq=440, dur=0.08, type="sine", vol=1, sweep=0 } = {}) {
+    if (!ensureAudio()) return;
+
+    const t0 = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (sweep) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + sweep), t0 + dur);
+
+    // envelope
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.6 * vol, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    o.connect(g);
+    g.connect(master);
+
+    o.start(t0);
+    o.stop(t0 + dur + 0.02);
+  }
+
+  function jingle(notes, { gap=0.03, type="square", vol=1 } = {}) {
+    if (!ensureAudio()) return;
+    let t = audioCtx.currentTime;
+    for (const n of notes) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(n.freq, t);
+
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.5 * vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + n.dur);
+
+      o.connect(g); g.connect(master);
+      o.start(t);
+      o.stop(t + n.dur + 0.02);
+
+      t += n.dur + gap;
+    }
+  }
+
+  // unlock audio on first interaction (required by browsers)
+  window.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+  window.addEventListener("keydown", unlockAudioOnce, { once: true });
+  soundToggle.addEventListener("change", () => setSound(soundToggle.checked));
+  setSound(soundToggle.checked);
+
+  // ===== Visibility state =====
+  let menuHidden = false;
+  let boardHidden = false;
+
+  function applyUIVisibility() {
+    topbar.classList.toggle("hidden", menuHidden);
+    sidebar.classList.toggle("hidden", boardHidden);
+
+    const endOpen = endScreen.classList.contains("show");
+    menuHint.classList.toggle("show", menuHidden && !endOpen);
+    boardHint.classList.toggle("show", boardHidden && !endOpen);
+  }
+
+  function setMenuHidden(hidden) { menuHidden = hidden; applyUIVisibility(); }
+  function toggleMenu() { setMenuHidden(!menuHidden); }
+
+  function setBoardHidden(hidden) { boardHidden = hidden; applyUIVisibility(); }
+  function toggleBoard() { setBoardHidden(!boardHidden); }
+
+  showMenuBtn.addEventListener("click", () => { unlockAudioOnce(); beep({freq:420,dur:0.05,type:"triangle",vol:0.4}); setMenuHidden(false); });
+  showBoardBtn.addEventListener("click", () => { unlockAudioOnce(); beep({freq:520,dur:0.05,type:"triangle",vol:0.4}); setBoardHidden(false); });
+
+  // ===== World =====
+  let gridW, gridH, cell, baseOffsetX, baseOffsetY;
+  let grid;               // 0 wall, 1 floor
+  let trails;             // 4 layers
+  let startCells = [];
+  let startCell = null;
+  let finishCell = null;
+
+  // ===== Camera =====
+  let camX = 0, camY = 0;
+  let camTargetX = 0, camTargetY = 0;
+  let focusBikeId = null;
+  let focusTimer = 0;
+  const FOCUS_DURATION = 2.6;
+
+  // ===== Powerups =====
+  let powerups = []; // {x,y,type,cooldown}
+  let basePath = null;
+  let basePathIndex = new Map();
+
+  // ===== Bikes =====
+  const BIKES = [
+    { name: "Azure",   body: "#7FC2FF", glow: "rgba(127,194,255,.85)" },
+    { name: "Neon",    body: "#7CFFB2", glow: "rgba(124,255,178,.85)" },
+    { name: "Amber",   body: "#FFD37C", glow: "rgba(255,211,124,.85)" },
+    { name: "Magenta", body: "#FF7CA6", glow: "rgba(255,124,166,.85)" },
+  ];
+
+  let bikes = [];
+  let running = false;
+  let winner = null;
+  let lastT = 0;
+  let raceTime = 0;
+  let countdown = 0;
+  const lapsTotal = 3;
+
+  // countdown tick helper
+  let lastCountdownSec = null;
+
+  // FX
+  let sparks = [];
+  let toasts = [];
+
+  // ===== RNG =====
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  let rand = mulberry32((Date.now() ^ (Math.random()*1e9)) >>> 0);
+  function rint(a, b) { return Math.floor(rand() * (b - a + 1)) + a; }
+  function choice(arr) { return arr[Math.floor(rand() * arr.length)]; }
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function makeGrid(w, h, fill=0) {
+    const a = new Array(h);
+    for (let y=0; y<h; y++) a[y] = new Array(w).fill(fill);
+    return a;
+  }
+  function inBounds(x, y) { return x>=0 && y>=0 && x<gridW && y<gridH; }
+
+  // ===== A* =====
+  const DIRS4 = [[1,0],[-1,0],[0,1],[0,-1]];
+  function key(x,y){ return (y<<16) ^ x; }
+
+  function astar(start, goal, blockedFn) {
+    const sx = start.x, sy = start.y;
+    const gx = goal.x, gy = goal.y;
+
+    const open = [];
+    const came = new Map();
+    const gScore = new Map();
+
+    function h(x,y){ return Math.abs(x-gx) + Math.abs(y-gy); }
+    function push(node) { open.push(node); open.sort((a,b)=>a.f-b.f); }
+
+    const sKey = key(sx,sy);
+    gScore.set(sKey, 0);
+    push({x:sx,y:sy,f:h(sx,sy)});
+
+    const visited = new Set();
+
+    while (open.length) {
+      const cur = open.shift();
+      const cKey = key(cur.x, cur.y);
+      if (visited.has(cKey)) continue;
+      visited.add(cKey);
+
+      if (cur.x === gx && cur.y === gy) {
+        const path = [{x:gx,y:gy}];
+        let k = cKey;
+        while (came.has(k)) {
+          const p = came.get(k);
+          path.push({x:p.x,y:p.y});
+          k = key(p.x,p.y);
+        }
+        path.reverse();
+        return path;
+      }
+
+      const curG = gScore.get(cKey) ?? Infinity;
+      for (const [dx,dy] of DIRS4) {
+        const nx = cur.x + dx, ny = cur.y + dy;
+        if (!inBounds(nx,ny)) continue;
+        if (blockedFn(nx,ny)) continue;
+
+        const nKey = key(nx,ny);
+        const tentative = curG + 1;
+        if (tentative < (gScore.get(nKey) ?? Infinity)) {
+          came.set(nKey, {x:cur.x,y:cur.y});
+          gScore.set(nKey, tentative);
+          push({x:nx,y:ny,f:tentative + h(nx,ny)});
+        }
+      }
+    }
+    return null;
+  }
+
+  // ===== Map builder (maze only) =====
+  function buildMazeMap() {
+    grid = makeGrid(gridW, gridH, 0);
+    const dirs = [[ 2, 0],[-2, 0],[ 0, 2],[ 0,-2]];
+    const sx = 1, sy = 1;
+    grid[sy][sx] = 1;
+    const stack = [[sx, sy]];
+
+    while (stack.length) {
+      const [x,y] = stack[stack.length - 1];
+      const neighbors = [];
+      for (const [dx,dy] of dirs) {
+        const nx = x + dx, ny = y + dy;
+        if (nx>0 && ny>0 && nx<gridW-1 && ny<gridH-1 && grid[ny][nx] === 0) {
+          neighbors.push([nx,ny, dx/2, dy/2]);
+        }
+      }
+      if (!neighbors.length) stack.pop();
+      else {
+        const [nx,ny, wx,wy] = choice(neighbors);
+        grid[y+wy][x+wx] = 1;
+        grid[ny][nx] = 1;
+        stack.push([nx,ny]);
+      }
+    }
+
+    const punches = Math.floor((gridW * gridH) * 0.038);
+    for (let i=0; i<punches; i++) {
+      const x = rint(2, gridW-3);
+      const y = rint(2, gridH-3);
+      if (grid[y][x] === 0) {
+        const passNeighbors =
+          (grid[y-1][x]===1) + (grid[y+1][x]===1) + (grid[y][x-1]===1) + (grid[y][x+1]===1);
+        if (passNeighbors >= 2) grid[y][x] = 1;
+      }
+    }
+
+    for (let x=0; x<gridW; x++) { grid[0][x]=0; grid[gridH-1][x]=0; }
+    for (let y=0; y<gridH; y++) { grid[y][0]=0; grid[y][gridW-1]=0; }
+
+    startCells = [];
+    for (let y=1; y<Math.min(16, gridH-1); y++) {
+      for (let x=1; x<Math.min(16, gridW-1); x++) if (grid[y][x] === 1) startCells.push({x,y});
+    }
+    shuffle(startCells);
+    startCell = startCells[0] || {x:1,y:1};
+
+    let best = null;
+    for (let i=0; i<700; i++) {
+      const x = rint(Math.floor(gridW*0.62), gridW-2);
+      const y = rint(Math.floor(gridH*0.62), gridH-2);
+      if (grid[y][x] !== 1) continue;
+      const d = Math.abs(x - startCell.x) + Math.abs(y - startCell.y);
+      if (!best || d > best.d) best = {x,y,d};
+    }
+    finishCell = best ? {x: best.x, y: best.y} : {x: gridW-2, y: gridH-2};
+
+    for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) {
+      const fx = finishCell.x + dx, fy = finishCell.y + dy;
+      if (inBounds(fx,fy)) grid[fy][fx] = 1;
+    }
+
+    trails = Array.from({length:4}, ()=>makeGrid(gridW, gridH, 0));
+    rebuildBasePathAndPowerups();
+  }
+
+  function rebuildBasePathAndPowerups() {
+    basePath = astar(startCell, finishCell, (x,y)=>grid[y][x]===0);
+    basePathIndex = new Map();
+    if (basePath && basePath.length) {
+      for (let i=0; i<basePath.length; i++) basePathIndex.set(key(basePath[i].x, basePath[i].y), i);
+    }
+    placePowerups();
+  }
+
+  // ===== Powerups =====
+  function placePowerups() {
+    powerups = [];
+    if (!powerToggle.checked) return;
+
+    function isNearStartOrFinish(x,y){
+      const ds = Math.abs(x-startCell.x)+Math.abs(y-startCell.y);
+      const df = Math.abs(x-finishCell.x)+Math.abs(y-finishCell.y);
+      return ds < 3 || df < 3;
+    }
+
+    function randFloor(minDStart, minDFinish, avoidBasePath=false) {
+      for (let t=0; t<12000; t++) {
+        const x = rint(2, gridW-3), y = rint(2, gridH-3);
+        if (grid[y][x] !== 1) continue;
+        const ds = Math.abs(x-startCell.x)+Math.abs(y-startCell.y);
+        const df = Math.abs(x-finishCell.x)+Math.abs(y-finishCell.y);
+        if (ds < minDStart || df < minDFinish) continue;
+        if (isNearStartOrFinish(x,y)) continue;
+        if (powerups.some(p=>p.x===x && p.y===y)) continue;
+        if (avoidBasePath && basePathIndex.has(key(x,y))) continue;
+        return {x,y};
+      }
+      return null;
+    }
+
+    const density = 0.0105;
+    const total = Math.max(50, Math.min(160, Math.floor((gridW*gridH) * density)));
+
+    for (let i=0; i<total; i++) {
+      const roll = rand();
+      const wantTrap = roll > 0.90;
+      const pos = wantTrap ? randFloor(5,5,true) : randFloor(4,4,false);
+      if (!pos) break;
+
+      let type;
+      const r = rand();
+      if (wantTrap) {
+        type = "trapdoor";
+      } else {
+        type =
+          r < 0.62 ? "speed"    :
+          r < 0.74 ? "slow"     :
+          r < 0.86 ? "shortcut" :
+          r < 0.94 ? "swap"     :
+                    "speed";
+      }
+      powerups.push({ ...pos, type, cooldown: 0 });
+    }
+
+    if (basePath && basePath.length > 24) {
+      const anchors = [
+        0.10, 0.16, 0.22, 0.28, 0.34, 0.40,
+        0.46, 0.52, 0.58, 0.64, 0.70, 0.76, 0.82, 0.88
+      ].map(p => Math.floor(basePath.length * p));
+
+      for (const idx of anchors) {
+        const p = basePath[idx];
+        if (!p) continue;
+        if (!powerups.some(q=>q.x===p.x && q.y===p.y)) powerups.push({x:p.x,y:p.y,type:"speed",cooldown:0});
+      }
+
+      const shortcuts = [
+        Math.floor(basePath.length * 0.30),
+        Math.floor(basePath.length * 0.62),
+      ];
+      for (const idx of shortcuts) {
+        const p = basePath[idx];
+        if (!p) continue;
+        if (!powerups.some(q=>q.x===p.x && q.y===p.y)) powerups.push({x:p.x,y:p.y,type:"shortcut",cooldown:0});
+      }
+
+      const trapCount = Math.min(10, Math.floor(basePath.length / 18));
+      for (let i=0; i<trapCount; i++) {
+        const bp = basePath[Math.floor(basePath.length * (0.18 + rand()*0.70))];
+        if (!bp) continue;
+        const candidates = DIRS4.map(([dx,dy])=>({x:bp.x+dx,y:bp.y+dy})).filter(p=>inBounds(p.x,p.y) && grid[p.y][p.x]===1);
+        shuffle(candidates);
+        const pick = candidates.find(p => !basePathIndex.has(key(p.x,p.y)) && !powerups.some(q=>q.x===p.x && q.y===p.y));
+        if (pick) powerups.push({x:pick.x,y:pick.y,type:"trapdoor",cooldown:0});
+      }
+    }
+  }
+
+  // ===== Bikes =====
+  function mkBike(i) {
+    const c = BIKES[i];
+    const chaos = chaosToggle.checked;
+    const baseSpeed = 7.2 + rand()*3.8;
+    return {
+      id: i,
+      name: c.name,
+      color: c.body,
+      glow: c.glow,
+
+      x: startCell.x, y: startCell.y,
+      px: startCell.x, py: startCell.y,
+      renderOffset: {
+        ox: (i===0?-0.18:i===1?0.18:i===2?-0.18:0.18),
+        oy: (i===0?-0.18:i===1?-0.18:i===2?0.18:0.18),
+      },
+
+      recent: [],
+      speed: baseSpeed,
+      jitter: chaos ? (0.10 + rand()*0.35) : 0.12,
+      patience: chaos ? (0.25 + rand()*0.70) : 0.55,
+      paceBias: chaos ? (0.78 + rand()*0.52) : 1.0,
+
+      tAccum: 0,
+      path: null,
+      lastDir: [1,0],
+
+      finished: false,
+      lap: 1,
+      finishCooldown: 0,
+
+      speedBoost: 0,
+      slowDebuff: 0,
+      swapShield: 0,
+
+      trapStun: 0,
+      lastProgress: 0,
+    };
+  }
+
+  function isWall(x,y){ return grid[y][x] === 0; }
+  function blockedFnFactory() { return (x,y)=>grid[y][x]===0; }
+
+  function leaveTrail(bike) {
+    if (!trailToggle.checked) return;
+    trails[bike.id][bike.y][bike.x] = 1;
+  }
+
+  // ===== Leaderboard logic =====
+  function approxPathIndex(b) {
+    const k = key(b.x,b.y);
+    let idx = basePathIndex.get(k);
+    if (idx == null && basePath && basePath.length) {
+      let best = null;
+      for (let i=0; i<basePath.length; i+=3) {
+        const p = basePath[i];
+        const d = Math.abs(p.x-b.x)+Math.abs(p.y-b.y);
+        if (!best || d < best.d) best = {i, d};
+      }
+      idx = best ? best.i : 0;
+    }
+    return idx ?? 0;
+  }
+
+  function getRaceProgress(b) {
+    const idx = approxPathIndex(b);
+    const dist = Math.abs(b.x - finishCell.x) + Math.abs(b.y - finishCell.y);
+    return (b.lap-1)*1_000_000 + idx*100 - dist;
+  }
+
+  function getSortedLeaderboard() {
+    const list = bikes.map(b => {
+      const prog = getRaceProgress(b);
+      b.lastProgress = b.lastProgress*0.85 + prog*0.15;
+      return { b, prog: b.lastProgress, dist: Math.abs(b.x-finishCell.x)+Math.abs(b.y-finishCell.y) };
+    });
+    list.sort((a,b)=>b.prog - a.prog);
+    return list;
+  }
+
+  function renderLeaderboard(final=false) {
+    const list = getSortedLeaderboard();
+    boardRows.innerHTML = "";
+
+    for (let i=0; i<list.length; i++) {
+      const b = list[i].b;
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const left = document.createElement("div");
+      left.className = "name";
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.color = b.color;
+      dot.style.background = b.color;
+
+      const label = document.createElement("span");
+      label.textContent = `${i+1}. ${b.name}`;
+
+      left.appendChild(dot);
+      left.appendChild(label);
+
+      const right = document.createElement("div");
+      right.className = "meta";
+
+      const lapPill = document.createElement("span");
+      lapPill.className = "pill";
+      lapPill.textContent = `L${b.lap}/${lapsTotal}`;
+
+      const distPill = document.createElement("span");
+      distPill.className = "pill";
+      distPill.textContent = b.finished ? "DONE" : `d=${Math.max(0, list[i].dist)}`;
+
+      right.appendChild(lapPill);
+      right.appendChild(distPill);
+
+      row.appendChild(left);
+      row.appendChild(right);
+
+      if (i===0 && running) {
+        row.style.borderColor = "rgba(124,255,178,.35)";
+        row.style.boxShadow = "0 0 0 1px rgba(124,255,178,.20), 0 14px 35px rgba(0,0,0,.25)";
+      }
+
+      boardRows.appendChild(row);
+    }
+
+    if (final) {
+      endGrid.innerHTML = "";
+      for (let i=0; i<list.length; i++) {
+        const b = list[i].b;
+        const div = document.createElement("div");
+        div.className = "row";
+        div.style.margin = "0";
+        div.style.borderColor = "rgba(255,255,255,.14)";
+        div.innerHTML = `
+          <div class="name">
+            <span class="dot" style="color:${b.color};background:${b.color}"></span>
+            <span>${i+1}. ${b.name}</span>
+          </div>
+          <div class="meta">
+            <span class="pill">Lap ${b.lap}/${lapsTotal}</span>
+            <span class="pill">${b.finished ? "🏁 Finished" : "—"}</span>
+          </div>
+        `;
+        endGrid.appendChild(div);
+      }
+    }
+  }
+
+  // ===== Toast + Focus =====
+  function addToast(text, color, bike) {
+    toasts.push({ text, color, ttl: 1.8, who: bike.id, x: bike.x, y: bike.y });
+  }
+  function focusOnBike(bikeId, seconds=FOCUS_DURATION) {
+    focusBikeId = bikeId;
+    focusTimer = seconds;
+  }
+
+  // ===== Powerup handling =====
+  function powerupAt(x,y) {
+    return powerups.find(p => p.x===x && p.y===y) || null;
+  }
+
+  function spawnSparks(x, y, color) {
+    const count = 7 + rint(0,7);
+    for (let i=0; i<count; i++) {
+      const ang = rand() * Math.PI * 2;
+      const spd = 30 + rand()*90;
+      sparks.push({ x, y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd, life: 0.22 + rand()*0.30, color });
+    }
+  }
+
+  function teleportToRandomFarCell(bike) {
+    for (let t=0; t<9000; t++) {
+      const x = rint(2, gridW-3), y = rint(2, gridH-3);
+      if (grid[y][x] !== 1) continue;
+      if (Math.abs(x - finishCell.x) + Math.abs(y - finishCell.y) < 4) continue;
+      const d = Math.abs(x - bike.x) + Math.abs(y - bike.y);
+      if (d < Math.floor(Math.min(gridW,gridH)*0.18)) continue;
+      bike.px = bike.x; bike.py = bike.y;
+      bike.x = x; bike.y = y;
+      bike.path = null;
+      bike.recent.length = 0;
+      leaveTrail(bike);
+      return true;
+    }
+    return false;
+  }
+
+  function doShortcutJump(bike) {
+    if (!basePath || basePath.length < 10) return false;
+
+    const k = key(bike.x, bike.y);
+    let idx = basePathIndex.get(k);
+    if (idx == null) {
+      let best = null;
+      for (let i=0; i<basePath.length; i+=2) {
+        const p = basePath[i];
+        const d = Math.abs(p.x-bike.x)+Math.abs(p.y-bike.y);
+        if (!best || d < best.d) best = {i, d};
+      }
+      idx = best ? best.i : 0;
+    }
+
+    const jump = rint(10, 22);
+    const target = basePath[Math.min(basePath.length-1, idx + jump)];
+    if (!target) return false;
+
+    bike.px = bike.x; bike.py = bike.y;
+    bike.x = target.x; bike.y = target.y;
+    bike.path = null;
+    bike.recent.length = 0;
+    leaveTrail(bike);
+    return true;
+  }
+
+  function progressScore(b) {
+    const d = Math.abs(b.x - finishCell.x) + Math.abs(b.y - finishCell.y);
+    return b.lap*100000 - d;
+  }
+  function getLastPlaceBike(excludeId) {
+    let last = null;
+    for (const b of bikes) {
+      if (b.finished) continue;
+      if (b.id === excludeId) continue;
+      if (!last || progressScore(b) < progressScore(last)) last = b;
+    }
+    return last;
+  }
+
+  function doSwapWithLast(bike) {
+    if (bike.swapShield > 0) return false;
+    const last = getLastPlaceBike(bike.id);
+    if (!last) return false;
+
+    const ax=bike.x, ay=bike.y, apx=bike.px, apy=bike.py;
+    bike.x = last.x; bike.y = last.y;
+    bike.px = last.px; bike.py = last.py;
+
+    last.x = ax; last.y = ay;
+    last.px = apx; last.py = apy;
+
+    bike.swapShield = 1.0;
+    last.swapShield = 1.0;
+
+    bike.path = null;
+    last.path = null;
+
+    leaveTrail(bike);
+    leaveTrail(last);
+    return true;
+  }
+
+  function applyPowerup(bike, p) {
+    if (!p || p.cooldown > 0) return;
+
+    const s = worldToScreenPx(bike.x, bike.y);
+    spawnSparks(s.sx, s.sy, bike.color);
+
+    // ✅ powerup SFX
+    if (p.type === "speed")    beep({freq:900, dur:0.07, type:"sawtooth", vol:0.9, sweep: 600});
+    if (p.type === "slow")     beep({freq:220, dur:0.10, type:"square",  vol:0.8, sweep:-80});
+    if (p.type === "shortcut") jingle([{freq:700,dur:0.05},{freq:980,dur:0.07}], {type:"triangle", vol:0.9});
+    if (p.type === "swap")     jingle([{freq:520,dur:0.05},{freq:420,dur:0.05},{freq:520,dur:0.07}], {type:"square", vol:0.8});
+    if (p.type === "trapdoor") beep({freq:180, dur:0.14, type:"sine", vol:0.9, sweep:-120});
+
+    if (p.type === "speed") {
+      bike.speedBoost = Math.max(bike.speedBoost, 2.4);
+      p.cooldown = 2.6;
+      addToast("⚡ Speed Boost!", bike.color, bike);
+      focusOnBike(bike.id, 1.9);
+
+    } else if (p.type === "slow") {
+      bike.slowDebuff = Math.max(bike.slowDebuff, 2.1);
+      p.cooldown = 3.2;
+      addToast("🐌 Slow Trap!", "rgba(255,211,124,.95)", bike);
+      focusOnBike(bike.id, 2.0);
+
+    } else if (p.type === "shortcut") {
+      p.cooldown = 4.0;
+      const jumped = doShortcutJump(bike);
+      addToast(jumped ? "🌀 Shortcut Jump!" : "🌀 Shortcut fizzled", "rgba(124,255,178,.95)", bike);
+      focusOnBike(bike.id, 2.2);
+
+    } else if (p.type === "swap") {
+      p.cooldown = 5.0;
+      const swapped = doSwapWithLast(bike);
+      addToast(swapped ? "🔁 Swapped with last!" : "🔁 No swap target", "rgba(255,124,166,.95)", bike);
+      focusOnBike(bike.id, 2.3);
+
+    } else if (p.type === "trapdoor") {
+      p.cooldown = 6.0;
+      bike.trapStun = Math.max(bike.trapStun, 0.35);
+      const ok = teleportToRandomFarCell(bike);
+      addToast(ok ? "🕳️ TRAP DOOR!" : "🕳️ Trap jammed", "rgba(233,241,255,.92)", bike);
+      focusOnBike(bike.id, 2.4);
+    }
+  }
+
+  // ===== FX =====
+  function updateSparks(dt) {
+    for (const p of sparks) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= (1 - 2.5*dt);
+      p.vy *= (1 - 2.5*dt);
+    }
+    sparks = sparks.filter(p => p.life > 0);
+  }
+  function updateToasts(dt) {
+    for (const t of toasts) {
+      t.ttl -= dt;
+      const b = bikes[t.who];
+      if (b) { t.x = b.x; t.y = b.y; }
+    }
+    toasts = toasts.filter(t => t.ttl > 0);
+  }
+
+  // ===== Camera =====
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function worldToScreenPx(wx, wy) {
+    const wpx = baseOffsetX + wx*cell + cell/2;
+    const wpy = baseOffsetY + wy*cell + cell/2;
+    return { sx: Math.round(wpx - camX), sy: Math.round(wpy - camY) };
+  }
+
+  function cellToScreen(x,y) {
+    return {
+      px: Math.round(baseOffsetX + x*cell - camX),
+      py: Math.round(baseOffsetY + y*cell - camY)
+    };
+  }
+
+  function updateCamera(dt) {
+    camTargetX = 0; camTargetY = 0;
+
+    if (focusTimer > 0) {
+      focusTimer -= dt;
+      if (focusTimer <= 0) focusBikeId = null;
+    }
+
+    const focused = (focusBikeId != null) ? bikes[focusBikeId] : null;
+    if (focused) {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      const worldCX = baseOffsetX + focused.x*cell + cell/2;
+      const worldCY = baseOffsetY + focused.y*cell + cell/2;
+      camTargetX = worldCX - w/2;
+      camTargetY = worldCY - h/2;
+
+      const worldW = gridW*cell;
+      const worldH = gridH*cell;
+      const minX = baseOffsetX - 20;
+      const minY = baseOffsetY - 20;
+      const maxX = baseOffsetX + worldW - w + 20;
+      const maxY = baseOffsetY + worldH - h + 20;
+      camTargetX = clamp(camTargetX, minX, maxX);
+      camTargetY = clamp(camTargetY, minY, maxY);
+    }
+
+    const k = 1 - Math.pow(0.001, dt);
+    camX += (camTargetX - camX) * k;
+    camY += (camTargetY - camY) * k;
+
+    camX = Math.round(camX);
+    camY = Math.round(camY);
+  }
+
+  // ===== AI move =====
+  function pickMove(bike) {
+    const chaos = chaosToggle.checked;
+    const blockedFn = blockedFnFactory();
+    const goal = finishCell;
+
+    const needRepath = !bike.path || bike.path.length < 2 || (rand() < (bike.jitter * (chaos ? 0.55 : 0.35)));
+    if (needRepath) bike.path = astar({x:bike.x,y:bike.y}, goal, blockedFn);
+
+    const moves = [];
+    for (const [dx,dy] of DIRS4) {
+      const nx = bike.x + dx, ny = bike.y + dy;
+      if (!inBounds(nx,ny)) continue;
+      if (blockedFn(nx,ny)) continue;
+      moves.push({nx,ny, dx,dy, uturn:(nx===bike.px && ny===bike.py)});
+    }
+    if (!moves.length) return {stuck:true};
+
+    let preferred = null;
+    if (bike.path && bike.path.length >= 2) preferred = bike.path[1];
+
+    for (const m of moves) {
+      const dist = Math.abs(m.nx - goal.x) + Math.abs(m.ny - goal.y);
+      m.score = -dist * 1.35;
+
+      if (preferred && m.nx === preferred.x && m.ny === preferred.y) m.score += 8.0;
+      if (m.uturn) m.score -= 8.5;
+
+      const memKey = (m.nx<<16) ^ m.ny;
+      const idx = bike.recent.indexOf(memKey);
+      if (idx !== -1) m.score -= (6.0 - idx*0.35);
+
+      let freedoms = 0;
+      for (const [adx,ady] of DIRS4) {
+        const ax = m.nx + adx, ay = m.ny + ady;
+        if (!inBounds(ax,ay)) continue;
+        if (grid[ay][ax] !== 0) freedoms++;
+      }
+      m.score += freedoms * (0.9 + bike.patience);
+
+      if (powerToggle.checked) {
+        const pu = powerupAt(m.nx,m.ny);
+        if (pu && pu.cooldown<=0) {
+          if (pu.type === "speed") m.score += 6.0;
+          if (pu.type === "shortcut") m.score += 4.4;
+          if (pu.type === "swap") m.score += 2.0;
+          if (pu.type === "slow") m.score += (chaos ? 0.4 : -0.8);
+          if (pu.type === "trapdoor") m.score += (chaos ? -1.2 : -2.4);
+        }
+      }
+
+      const randomness = chaos ? (0.10 + bike.jitter) : 0.06;
+      m.score += (rand() - 0.5) * (randomness * 10);
+    }
+
+    const nonUTurn = moves.filter(m => !m.uturn);
+    const pool = nonUTurn.length ? nonUTurn : moves;
+    pool.sort((a,b)=>b.score-a.score);
+
+    let pickIndex = 0;
+    if (chaos && pool.length > 1 && rand() < (0.08 + bike.jitter*0.35)) {
+      pickIndex = Math.min(pool.length - 1, 1 + rint(0, Math.min(2, pool.length-2)));
+    }
+
+    const chosen = pool[pickIndex];
+    return { x: chosen.nx, y: chosen.ny, dir:[chosen.dx, chosen.dy] };
+  }
+
+  // ===== Simulation =====
+  function step(dt) {
+    if (!running) return;
+
+    if (countdown > 0) {
+      countdown -= dt;
+      if (countdown <= 0) {
+        statusTxt.textContent = "Racing";
+        lastCountdownSec = null;
+        // ✅ countdown go
+        beep({freq: 960, dur: 0.08, type:"sawtooth", vol:0.9, sweep: 420});
+        if (autoHideToggle.checked) setMenuHidden(true);
+      } else {
+        const sec = Math.ceil(countdown);
+        statusTxt.textContent = `Starting in ${sec}…`;
+        // ✅ countdown tick
+        if (sec !== lastCountdownSec) {
+          lastCountdownSec = sec;
+          beep({freq: 280 + (3-sec)*90, dur: 0.05, type:"square", vol:0.65});
+        }
+        return;
+      }
+    }
+
+    raceTime += dt;
+    timeTxt.textContent = `${raceTime.toFixed(1)}s`;
+
+    for (const p of powerups) if (p.cooldown > 0) p.cooldown -= dt;
+
+    for (const bike of bikes) {
+      if (bike.finished) continue;
+
+      if (bike.finishCooldown > 0) bike.finishCooldown -= dt;
+      if (bike.speedBoost > 0) bike.speedBoost -= dt;
+      if (bike.slowDebuff > 0) bike.slowDebuff -= dt;
+      if (bike.swapShield > 0) bike.swapShield -= dt;
+      if (bike.trapStun > 0) bike.trapStun -= dt;
+
+      if (bike.trapStun > 0) continue;
+
+      let mult = 1.0;
+      if (bike.speedBoost > 0) mult *= 1.95;
+      if (bike.slowDebuff > 0) mult *= 0.55;
+
+      const chaos = chaosToggle.checked;
+      const chaosJitter = chaos ? (0.92 + rand()*0.20) : 1.0;
+
+      const speedNow = bike.speed * bike.paceBias * mult * chaosJitter;
+      bike.tAccum += dt * speedNow;
+
+      while (bike.tAccum >= 1) {
+        bike.tAccum -= 1;
+
+        const m = pickMove(bike);
+        if (m.stuck) break;
+
+        bike.px = bike.x; bike.py = bike.y;
+        bike.x = m.x; bike.y = m.y;
+
+        const mk = (bike.x<<16) ^ bike.y;
+        bike.recent.unshift(mk);
+        if (bike.recent.length > 10) bike.recent.pop();
+
+        const turning = (m.dir[0] !== bike.lastDir[0] || m.dir[1] !== bike.lastDir[1]);
+        if (turning) {
+          const s = worldToScreenPx(bike.x,bike.y);
+          spawnSparks(s.sx, s.sy, bike.color);
+          // subtle turn "tick"
+          if (!boardHidden) beep({freq: 160 + bike.id*40, dur: 0.015, type:"sine", vol:0.08});
+        }
+        bike.lastDir = m.dir;
+
+        if (powerToggle.checked) {
+          const pu = powerupAt(bike.x,bike.y);
+          if (pu) applyPowerup(bike, pu);
+        }
+
+        leaveTrail(bike);
+
+        if (bike.x === finishCell.x && bike.y === finishCell.y && bike.finishCooldown <= 0) {
+          bike.finishCooldown = 0.7;
+
+          if (bike.lap >= lapsTotal) {
+            bike.finished = true;
+            winner = bike;
+            running = false;
+            statusTxt.textContent = "Finished";
+            winnerTxt.textContent = `${bike.name}`;
+            focusOnBike(bike.id, 3.5);
+            addToast("🏁 FINISH!", "rgba(233,241,255,.95)", bike);
+
+            // ✅ finish fanfare
+            jingle(
+              [{freq:660,dur:0.08},{freq:880,dur:0.08},{freq:990,dur:0.10},{freq:1320,dur:0.14}],
+              {type:"sawtooth", vol:1}
+            );
+
+            showEndScreen();
+            break;
+          } else {
+            bike.lap++;
+            lapTxt.textContent = `${Math.max(...bikes.map(b=>b.lap))}/${lapsTotal}`;
+            bike.path = null;
+
+            // ✅ lap ding
+            beep({freq: 540 + bike.lap*80, dur: 0.06, type:"triangle", vol:0.55, sweep: 120});
+
+            const neighbors = DIRS4
+              .map(([dx,dy])=>({x:bike.x+dx,y:bike.y+dy,dx,dy}))
+              .filter(p=>inBounds(p.x,p.y) && !isWall(p.x,p.y));
+            if (neighbors.length) {
+              const n = choice(neighbors);
+              bike.px = bike.x; bike.py = bike.y;
+              bike.x = n.x; bike.y = n.y;
+              bike.lastDir = [n.dx,n.dy];
+              leaveTrail(bike);
+            }
+          }
+        }
+      }
+      if (winner) break;
+    }
+  }
+
+  // ===== Drawing helpers (unchanged) =====
+  function drawGlowRect(x,y,w,h, glow, alpha=1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 18;
+    ctx.fillRect(x,y,w,h);
+    ctx.restore();
+  }
+
+  function drawPowerupIcon(p) {
+    const {px,py} = cellToScreen(p.x,p.y);
+    const c = cell;
+    const active = (p.cooldown <= 0);
+
+    let glow, fill, label;
+    if (p.type === "speed")    { glow="rgba(127,194,255,.85)"; fill="rgba(127,194,255,.14)"; label="⚡"; }
+    if (p.type === "slow")     { glow="rgba(255,211,124,.85)"; fill="rgba(255,211,124,.12)"; label="🐌"; }
+    if (p.type === "shortcut") { glow="rgba(124,255,178,.90)"; fill="rgba(124,255,178,.12)"; label="🌀"; }
+    if (p.type === "swap")     { glow="rgba(255,124,166,.85)"; fill="rgba(255,124,166,.12)"; label="🔁"; }
+    if (p.type === "trapdoor") { glow="rgba(233,241,255,.70)"; fill="rgba(233,241,255,.08)"; label="🕳️"; }
+
+    ctx.save();
+    ctx.globalAlpha = active ? 1 : 0.25;
+    ctx.fillStyle = fill;
+    drawGlowRect(px+c*0.20, py+c*0.20, c*0.60, c*0.60, glow, 0.95);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(255,255,255,.12)";
+    ctx.fillRect(px+c*0.28, py+c*0.28, c*0.44, c*0.44);
+
+    ctx.font = `${Math.max(12, c*0.55)}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(233,241,255,.92)";
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 14;
+    ctx.fillText(label, px + c/2, py + c/2 + 1);
+
+    if (!active) {
+      const t = clamp(p.cooldown / 6.0, 0, 1);
+      ctx.strokeStyle = "rgba(233,241,255,.22)";
+      ctx.lineWidth = Math.max(2, c*0.10);
+      ctx.beginPath();
+      ctx.arc(px+c/2, py+c/2, c*0.34, -Math.PI/2, -Math.PI/2 + (1-t)*Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    r = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function draw() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx.clearRect(0,0,w,h);
+
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = "#ffffff";
+    for (let y=0; y<h; y+=4) ctx.fillRect(0,y,w,1);
+    ctx.restore();
+
+    for (let y=0; y<gridH; y++) {
+      for (let x=0; x<gridW; x++) {
+        const {px,py} = cellToScreen(x,y);
+        if (grid[y][x] === 0) {
+          ctx.fillStyle = "rgba(18,35,60,.85)";
+          ctx.fillRect(px,py,cell,cell);
+          if ((x+y) % 7 === 0) {
+            ctx.fillStyle = "rgba(127,194,255,.10)";
+            ctx.fillRect(px+1,py+1,cell-2,cell-2);
+          }
+        } else {
+          ctx.fillStyle = "rgba(255,255,255,.02)";
+          ctx.fillRect(px,py,cell,cell);
+        }
+      }
+    }
+
+    {
+      const {px,py} = cellToScreen(finishCell.x, finishCell.y);
+      ctx.save();
+      ctx.fillStyle = "rgba(124,255,178,.10)";
+      ctx.fillRect(px,py,cell,cell);
+      ctx.strokeStyle = "rgba(124,255,178,.55)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px+1,py+1,cell-2,cell-2);
+      ctx.shadowColor = "rgba(124,255,178,.90)";
+      ctx.shadowBlur = 20;
+      ctx.strokeRect(px+2,py+2,cell-4,cell-4);
+      ctx.restore();
+    }
+
+    if (powerToggle.checked) for (const p of powerups) drawPowerupIcon(p);
+
+    if (trailToggle.checked) {
+      for (const b of bikes) {
+        const layer = trails[b.id];
+        for (let y=0; y<gridH; y++) {
+          for (let x=0; x<gridW; x++) {
+            if (layer[y][x] !== 1) continue;
+            const {px,py} = cellToScreen(x,y);
+            ctx.fillStyle = b.color;
+            drawGlowRect(px+cell*0.24, py+cell*0.24, cell*0.52, cell*0.52, b.glow, 0.12);
+            ctx.globalAlpha = 0.18;
+            ctx.fillStyle = b.color;
+            ctx.fillRect(px+cell*0.32, py+cell*0.32, cell*0.36, cell*0.36);
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    }
+
+    if (pathToggle.checked) {
+      for (const b of bikes) {
+        if (b.finished || !b.path || b.path.length < 2) continue;
+        ctx.save();
+        ctx.strokeStyle = b.color;
+        ctx.shadowColor = b.glow;
+        ctx.shadowBlur = 18;
+        ctx.globalAlpha = 0.28;
+        ctx.lineWidth = Math.max(1.5, cell*0.18);
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        for (let i=0; i<b.path.length; i++) {
+          const p = b.path[i];
+          const {sx,sy} = worldToScreenPx(p.x,p.y);
+          if (i===0) ctx.moveTo(sx,sy);
+          else ctx.lineTo(sx,sy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    for (const p of sparks) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life / 0.45));
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.6 + (1 - p.life)*2.2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for (const b of bikes) {
+      const {px,py} = cellToScreen(b.x,b.y);
+      const ox = b.renderOffset.ox * cell;
+      const oy = b.renderOffset.oy * cell;
+
+      ctx.save();
+      ctx.fillStyle = b.color;
+      ctx.shadowColor = b.glow;
+      ctx.shadowBlur = 26;
+
+      ctx.globalAlpha = (focusBikeId === b.id) ? 1 : 0.95;
+      ctx.fillRect(px+cell*0.18+ox, py+cell*0.18+oy, cell*0.64, cell*0.64);
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha *= 0.9;
+      ctx.fillStyle = "rgba(255,255,255,.18)";
+      ctx.fillRect(px+cell*0.34+ox, py+cell*0.34+oy, cell*0.32, cell*0.32);
+
+      const badges = [];
+      if (b.speedBoost > 0) badges.push("⚡");
+      if (b.slowDebuff > 0) badges.push("🐌");
+      if (b.swapShield > 0) badges.push("🛡️");
+      if (b.trapStun > 0) badges.push("🕳️");
+      if (badges.length) {
+        ctx.font = `${Math.max(12, cell*0.42)}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.shadowColor = b.glow;
+        ctx.shadowBlur = 16;
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgba(233,241,255,.95)";
+        ctx.fillText(badges.join(""), px+cell*0.08+ox, py+cell*0.18+oy - 4);
+      }
+
+      ctx.globalAlpha = 0.92;
+      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillStyle = b.color;
+      ctx.shadowColor = b.glow;
+      ctx.shadowBlur = 12;
+      ctx.fillText(`${b.name} • L${b.lap}`, px + cell*0.10, py - 6);
+      ctx.restore();
+    }
+
+    for (const t of toasts) {
+      const b = bikes[t.who];
+      if (!b) continue;
+      const {sx,sy} = worldToScreenPx(b.x,b.y);
+      const alpha = Math.max(0, Math.min(1, t.ttl / 1.8));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = "700 14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.shadowColor = "rgba(0,0,0,.55)";
+      ctx.shadowBlur = 10;
+      const txt = t.text;
+      const pad = 10;
+      const wtxt = ctx.measureText(txt).width;
+      const bx = sx;
+      const by = sy - cell*0.8;
+      ctx.fillStyle = "rgba(0,0,0,.45)";
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1;
+      roundRect(ctx, bx - wtxt/2 - pad, by - 22, wtxt + pad*2, 26, 10, true, true);
+      ctx.fillStyle = t.color || "rgba(233,241,255,.95)";
+      ctx.shadowColor = t.color || "rgba(127,194,255,.75)";
+      ctx.shadowBlur = 18;
+      ctx.fillText(txt, bx, by - 4);
+      ctx.restore();
+    }
+
+    ctx.save();
+    const focusBoost = (focusBikeId != null) ? 0.70 : 0.52;
+    const g = ctx.createRadialGradient(w/2,h/2, Math.min(w,h)*0.18, w/2,h/2, Math.max(w,h)*0.70);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, `rgba(0,0,0,${focusBoost})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+    ctx.restore();
+
+    if (running && countdown > 0) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,.35)";
+      ctx.fillRect(0,0,w,h);
+      ctx.font = "900 64px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(127,194,255,.9)";
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = "rgba(233,241,255,.95)";
+      ctx.fillText(String(Math.ceil(countdown)), w/2, h/2);
+      ctx.restore();
+    }
+  }
+
+  // ===== Loop =====
+  function loop(t) {
+    if (!lastT) lastT = t;
+    const dt = Math.min(0.06, (t - lastT) / 1000);
+    lastT = t;
+
+    updateCamera(dt);
+    step(dt);
+    updateSparks(dt);
+    updateToasts(dt);
+    draw();
+
+    if (t % 100 < 16) renderLeaderboard(false);
+    requestAnimationFrame(loop);
+  }
+
+  // ===== End screen =====
+  function showEndScreen() {
+    renderLeaderboard(true);
+    endSub.textContent = `Winner: ${winner ? winner.name : "—"} • Time: ${raceTime.toFixed(1)}s`;
+    endScreen.classList.add("show");
+    applyUIVisibility();
+    setMenuHidden(false);
+  }
+  function hideEndScreen() {
+    endScreen.classList.remove("show");
+    applyUIVisibility();
+  }
+
+  // ===== Reset / Build track =====
+  function resetRace(newTrack=true) {
+    winner = null;
+    running = false;
+    lastT = 0;
+    raceTime = 0;
+    countdown = 0;
+    lastCountdownSec = null;
+    sparks = [];
+    toasts = [];
+    focusBikeId = null;
+    focusTimer = 0;
+    camX = camY = camTargetX = camTargetY = 0;
+
+    statusTxt.textContent = "Ready";
+    winnerTxt.textContent = "—";
+    timeTxt.textContent = "0.0s";
+    lapTxt.textContent = `1/${lapsTotal}`;
+
+    hideEndScreen();
+
+    menuHidden = false;
+    boardHidden = false;
+    applyUIVisibility();
+
+    rand = mulberry32((Date.now() ^ (Math.random()*1e9)) >>> 0);
+
+    resize();
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+
+    cell = Math.max(12, Math.min(22, Math.floor(Math.min(w, h) / 44)));
+    gridW = Math.max(49, Math.floor(w / cell));
+    gridH = Math.max(35, Math.floor(h / cell));
+    if (gridW % 2 === 0) gridW--;
+    if (gridH % 2 === 0) gridH--;
+
+    baseOffsetX = Math.floor((w - gridW * cell) / 2);
+    baseOffsetY = Math.floor((h - gridH * cell) / 2);
+
+    buildMazeMap();
+
+    bikes = [0,1,2,3].map(i => mkBike(i));
+    for (const b of bikes) leaveTrail(b);
+
+    focusOnBike(rint(0,3), 1.2);
+    renderLeaderboard(false);
+  }
+
+  // ===== Controls =====
+  startBtn.addEventListener('click', () => {
+    unlockAudioOnce();
+    // ✅ start jingle
+    jingle([{freq:520,dur:0.06},{freq:660,dur:0.06},{freq:880,dur:0.08}], {type:"sawtooth", vol:0.9});
+
+    if (winner) resetRace(false);
+    winner = null;
+    running = true;
+    countdown = 3;
+    lastCountdownSec = null;
+    statusTxt.textContent = "Starting…";
+    focusOnBike(rint(0,3), 1.2);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    unlockAudioOnce();
+    beep({freq:260, dur:0.06, type:"square", vol:0.6, sweep:120});
+    resetRace(true);
+  });
+
+  endAgain.addEventListener("click", () => {
+    unlockAudioOnce();
+    beep({freq:520,dur:0.05,type:"triangle",vol:0.6,sweep:120});
+    hideEndScreen();
+    resetRace(false);
+    startBtn.click();
+  });
+  endNew.addEventListener("click", () => {
+    unlockAudioOnce();
+    beep({freq:420,dur:0.06,type:"square",vol:0.6,sweep:140});
+    hideEndScreen();
+    resetRace(true);
+    startBtn.click();
+  });
+
+  canvas.addEventListener('click', (ev) => {
+    unlockAudioOnce();
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left;
+    const my = ev.clientY - rect.top;
+
+    let best = null;
+    for (const b of bikes) {
+      const {sx,sy} = worldToScreenPx(b.x,b.y);
+      const dx = sx - mx, dy = sy - my;
+      const d2 = dx*dx + dy*dy;
+      if (!best || d2 < best.d2) best = {id:b.id, d2};
+    }
+    if (best && best.d2 < (cell*1.3)*(cell*1.3)) {
+      focusBikeId = best.id;
+      focusTimer = 999;
+      addToast("🎯 Focus", bikes[best.id].color, bikes[best.id]);
+      beep({freq: 640 + best.id*60, dur:0.05, type:"triangle", vol:0.45});
+    } else {
+      focusBikeId = null;
+      focusTimer = 0;
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      unlockAudioOnce();
+      if (endScreen.classList.contains("show")) {
+        hideEndScreen();
+        resetRace(false);
+        startBtn.click();
+      } else {
+        startBtn.click();
+      }
+    }
+    if (e.key.toLowerCase() === "r") { unlockAudioOnce(); beep({freq:240,dur:0.05,type:"square",vol:0.5}); resetRace(true); }
+
+    if (e.key.toLowerCase() === "m") { unlockAudioOnce(); beep({freq:360,dur:0.04,type:"triangle",vol:0.35}); toggleMenu(); }
+    if (e.key.toLowerCase() === "l") { unlockAudioOnce(); beep({freq:460,dur:0.04,type:"triangle",vol:0.35}); toggleBoard(); }
+
+    if ("1234".includes(e.key)) {
+      unlockAudioOnce();
+      const idx = Number(e.key) - 1;
+      if (bikes[idx]) {
+        bikes[idx].speedBoost = Math.max(bikes[idx].speedBoost, 2.2);
+        addToast("⚡ Manual Boost!", bikes[idx].color, bikes[idx]);
+        focusOnBike(idx, 1.6);
+        beep({freq: 760 + idx*70, dur:0.06, type:"sawtooth", vol:0.85, sweep: 420});
+      }
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    resize();
+    resetRace(true);
+  });
+
+  // ===== Start =====
+  resetRace(true);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
