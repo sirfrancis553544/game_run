@@ -126,6 +126,37 @@
     .name{display:flex; align-items:center; gap:8px; min-width:0;font-weight:900;}
     .meta{display:flex; gap:8px; align-items:center; color:rgba(233,241,255,.75);font-size:12px;white-space:nowrap;}
     .pill{padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);}
+.powerLegend{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:12px;
+  color:rgba(233,241,255,.78);
+}
+
+.legendTitle{
+  font-weight:900;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+  font-size:11px;
+  color:rgba(233,241,255,.65);
+  margin-bottom:4px;
+}
+
+.legendItem{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.legendIcon{
+  width:18px;
+  text-align:center;
+  font-size:14px;
+}
 
     /* End screen */
     .end{
@@ -245,6 +276,35 @@
         <span class="kbd">L</span>
       </div>
       <div class="boardRows" id="boardRows"></div>
+      <div class="powerLegend">
+  <div class="legendTitle">Powerups</div>
+
+  <div class="legendItem">
+    <span class="legendIcon">⚡</span>
+    <span><b>Speed Boost</b> — Big temporary speed increase</span>
+  </div>
+
+  <div class="legendItem">
+    <span class="legendIcon">🐌</span>
+    <span><b>Slow Trap</b> — Reduces speed for a short time</span>
+  </div>
+
+  <div class="legendItem">
+    <span class="legendIcon">🌀</span>
+    <span><b>Shortcut</b> — Jumps forward along the track</span>
+  </div>
+
+  <div class="legendItem">
+    <span class="legendIcon">🔁</span>
+    <span><b>Swap</b> — Switches position with last place</span>
+  </div>
+
+  <div class="legendItem">
+    <span class="legendIcon">🕳️</span>
+    <span><b>Trap Door</b> — Teleports to a random location</span>
+  </div>
+</div>
+
     </aside>
   </div>
 </div>
