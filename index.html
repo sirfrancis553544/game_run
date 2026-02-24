@@ -126,37 +126,38 @@
     .name{display:flex; align-items:center; gap:8px; min-width:0;font-weight:900;}
     .meta{display:flex; gap:8px; align-items:center; color:rgba(233,241,255,.75);font-size:12px;white-space:nowrap;}
     .pill{padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);}
-.powerLegend{
-  margin-top:12px;
-  padding-top:10px;
-  border-top:1px solid rgba(255,255,255,.10);
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  font-size:12px;
-  color:rgba(233,241,255,.78);
-}
 
-.legendTitle{
-  font-weight:900;
-  letter-spacing:.6px;
-  text-transform:uppercase;
-  font-size:11px;
-  color:rgba(233,241,255,.65);
-  margin-bottom:4px;
-}
+    .powerLegend{
+      margin-top:12px;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.10);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size:12px;
+      color:rgba(233,241,255,.78);
+    }
 
-.legendItem{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
+    .legendTitle{
+      font-weight:900;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      font-size:11px;
+      color:rgba(233,241,255,.65);
+      margin-bottom:4px;
+    }
 
-.legendIcon{
-  width:18px;
-  text-align:center;
-  font-size:14px;
-}
+    .legendItem{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .legendIcon{
+      width:18px;
+      text-align:center;
+      font-size:14px;
+    }
 
     /* End screen */
     .end{
@@ -168,17 +169,18 @@
       padding:20px;
     }
     .end.show{display:grid;}
-  .endCard{
-  width:min(620px, 95vw);
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:22px;
-  background:linear-gradient(to bottom, rgba(255,255,255,.09), rgba(255,255,255,.05));
-  box-shadow: 0 28px 80px rgba(0,0
-
+    .endCard{
+      width:min(620px, 95vw);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:22px;
+      background:linear-gradient(to bottom, rgba(255,255,255,.09), rgba(255,255,255,.05));
+      box-shadow: 0 28px 80px rgba(0,0,0,.45);
+      padding:16px;
+    }
 
     .endTop{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;margin-bottom:12px;}
-    .endTitle{ font-size:28px; }       /* was 18px */
-.endSub{ font-size:16px; }         /* was 13px */
+    .endTitle{ font-size:28px; }
+    .endSub{ font-size:16px; }
     .endGrid{display:grid; grid-template-columns: 1fr; gap:10px; margin-top:12px;}
     .endActions{display:flex; gap:10px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap;}
 
@@ -277,34 +279,33 @@
       </div>
       <div class="boardRows" id="boardRows"></div>
       <div class="powerLegend">
-  <div class="legendTitle">Powerups</div>
+        <div class="legendTitle">Powerups</div>
 
-  <div class="legendItem">
-    <span class="legendIcon">⚡</span>
-    <span><b>Speed Boost</b> — Big temporary speed increase</span>
-  </div>
+        <div class="legendItem">
+          <span class="legendIcon">⚡</span>
+          <span><b>Speed Boost</b> — Big temporary speed increase</span>
+        </div>
 
-  <div class="legendItem">
-    <span class="legendIcon">🐌</span>
-    <span><b>Slow Trap</b> — Reduces speed for a short time</span>
-  </div>
+        <div class="legendItem">
+          <span class="legendIcon">🐌</span>
+          <span><b>Slow Trap</b> — Reduces speed for a short time</span>
+        </div>
 
-  <div class="legendItem">
-    <span class="legendIcon">🌀</span>
-    <span><b>Shortcut</b> — Jumps forward along the track</span>
-  </div>
+        <div class="legendItem">
+          <span class="legendIcon">🌀</span>
+          <span><b>Shortcut</b> — Jumps forward along the track</span>
+        </div>
 
-  <div class="legendItem">
-    <span class="legendIcon">🔁</span>
-    <span><b>Swap</b> — Switches position with last place</span>
-  </div>
+        <div class="legendItem">
+          <span class="legendIcon">🔁</span>
+          <span><b>Swap</b> — Switches position with last place</span>
+        </div>
 
-  <div class="legendItem">
-    <span class="legendIcon">🕳️</span>
-    <span><b>Trap Door</b> — Teleports to a random location</span>
-  </div>
-</div>
-
+        <div class="legendItem">
+          <span class="legendIcon">🕳️</span>
+          <span><b>Trap Door</b> — Teleports to a random location</span>
+        </div>
+      </div>
     </aside>
   </div>
 </div>
@@ -503,12 +504,12 @@
   let basePath = null;
   let basePathIndex = new Map();
 
-  // ===== Bikes =====
+  // ===== Bikes (UPDATED: AI model names + icons) =====
   const BIKES = [
-    { name: "Azure",   body: "#7FC2FF", glow: "rgba(127,194,255,.85)" },
-    { name: "Neon",    body: "#7CFFB2", glow: "rgba(124,255,178,.85)" },
-    { name: "Amber",   body: "#FFD37C", glow: "rgba(255,211,124,.85)" },
-    { name: "Magenta", body: "#FF7CA6", glow: "rgba(255,124,166,.85)" },
+    { name: "GPT-5",       icon: "🧠", body: "#7FC2FF", glow: "rgba(127,194,255,.85)" },
+    { name: "Claude 3.5",  icon: "🧩", body: "#7CFFB2", glow: "rgba(124,255,178,.85)" },
+    { name: "Gemini 2.0",  icon: "✨", body: "#FFD37C", glow: "rgba(255,211,124,.85)" },
+    { name: "Llama 3",     icon: "🦙", body: "#FF7CA6", glow: "rgba(255,124,166,.85)" },
   ];
 
   let bikes = [];
@@ -775,6 +776,7 @@
     return {
       id: i,
       name: c.name,
+      icon: c.icon || "🏎️",          // ✅ NEW
       color: c.body,
       glow: c.glow,
 
@@ -866,7 +868,8 @@
       dot.style.background = b.color;
 
       const label = document.createElement("span");
-      label.textContent = `${i+1}. ${b.name}`;
+      // ✅ UPDATED: include icon
+      label.textContent = `${i+1}. ${b.icon} ${b.name}`;
 
       left.appendChild(dot);
       left.appendChild(label);
@@ -907,7 +910,7 @@
         div.innerHTML = `
           <div class="name">
             <span class="dot" style="color:${b.color};background:${b.color}"></span>
-            <span>${i+1}. ${b.name}</span>
+            <span>${i+1}. ${b.icon} ${b.name}</span>
           </div>
           <div class="meta">
             <span class="pill">Lap ${b.lap}/${lapsTotal}</span>
@@ -1290,7 +1293,8 @@
             winner = bike;
             running = false;
             statusTxt.textContent = "Finished";
-            winnerTxt.textContent = `${bike.name}`;
+            // ✅ Winner shows icon too
+            winnerTxt.textContent = `${bike.icon} ${bike.name}`;
             focusOnBike(bike.id, 3.5);
             addToast("🏁 FINISH!", "rgba(233,241,255,.95)", bike);
 
@@ -1340,12 +1344,11 @@
     const c = cell;
     const active = (p.cooldown <= 0);
 
-    // ✅ bigger icons (and slightly bigger tile block)
-    const box = 0.78;        // was ~0.60
+    const box = 0.78;
     const boxPad = (1 - box) / 2;
-    const inner = 0.56;      // was ~0.44
+    const inner = 0.56;
     const innerPad = (1 - inner) / 2;
-    const fontPx = Math.max(16, c * 0.72); // was c*0.55
+    const fontPx = Math.max(16, c * 0.72);
 
     let glow, fill, label;
     if (p.type === "speed")    { glow="rgba(127,194,255,.85)"; fill="rgba(127,194,255,.14)"; label="⚡"; }
@@ -1376,7 +1379,7 @@
       ctx.strokeStyle = "rgba(233,241,255,.22)";
       ctx.lineWidth = Math.max(2, c*0.12);
       ctx.beginPath();
-      ctx.arc(px+c/2, py+c/2, c*0.40, -Math.PI/2, -Math.PI/2 + (1-t)*Math.PI*2); // bigger ring
+      ctx.arc(px+c/2, py+c/2, c*0.40, -Math.PI/2, -Math.PI/2 + (1-t)*Math.PI*2);
       ctx.stroke();
     }
     ctx.restore();
@@ -1530,7 +1533,8 @@
       ctx.fillStyle = b.color;
       ctx.shadowColor = b.glow;
       ctx.shadowBlur = 12;
-      ctx.fillText(`${b.name} • L${b.lap}`, px + cell*0.10, py - 6);
+      // ✅ optional: show icon on bike label too
+      ctx.fillText(`${b.icon} ${b.name} • L${b.lap}`, px + cell*0.10, py - 6);
       ctx.restore();
     }
 
@@ -1603,7 +1607,8 @@
 
   function showEndScreen() {
     renderLeaderboard(true);
-    endSub.textContent = `Winner: ${winner ? winner.name : "—"} • Time: ${raceTime.toFixed(1)}s`;
+    // ✅ icon in end subtitle
+    endSub.textContent = `Winner: ${winner ? (winner.icon + " " + winner.name) : "—"} • Time: ${raceTime.toFixed(1)}s`;
     endScreen.classList.add("show");
     applyUIVisibility();
     setMenuHidden(false);
